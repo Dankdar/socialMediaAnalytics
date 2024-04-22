@@ -10,6 +10,7 @@ const loggerMiddleware = require('./middleware/logs');
 const usersRouter = require('./routes/users');
 const postsRouter = require('./routes/posts');
 const reactionsRouter = require('./routes/reactions');
+const analyticsRoutes = require('./routes/analytics');
 const mongoose = require("mongoose");
 
 const app = express();
@@ -40,6 +41,7 @@ app.use('/public/uploads', express.static('/public/uploads')); // folder for ima
 app.use('/users', usersRouter); // users and admins.
 app.use('/posts', postsRouter); // users and admins.
 app.use('/reactions', reactionsRouter); // users and admins.
+app.use('/analytics',analyticsRoutes);
 
 
 app.use(function(req, res, next) {
@@ -54,7 +56,7 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.render('error');
+  res.send('error');
 }); // error handler
 
 module.exports = app;

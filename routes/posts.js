@@ -1,13 +1,31 @@
-// postRoutes.js
 const express = require('express');
 const router = new express.Router();
-const postController = require('../controllers/posts'); // Adjust path as necessary
-const authMiddleware = require('../middleware/auth'); // Assuming you have authentication middleware
+const postsController = require('../controllers/posts');
+const authMiddleware = require('../middleware/auth');
+const multer = require('multer')
 
+const storage = multer.diskStorage({
+    destination: function(req, file, cb) {
+        cb(null, 'public/storage/');
+    },
+    filename: function(req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + file.originalname);
+    },
+    fileFilter: (req, file, cb) => {
+        if (file.fieldname === 'attachments' || file.fieldname === 'excelFile') {
+            cb(null, true);
+        } else {
+            cb(new Error('Unexpected field'));
+        }
+    }
+});
 
-router.post('/posts', authMiddleware, postController.createPost);
-router.get('/posts/:postId', authMiddleware, postController.getPost);
-router.put('/posts/:postId', authMiddleware, postController.updatePost);
-router.delete('/posts/:postId', authMiddleware, postController.deletePost);
+const upload = multer({ storage: storage });
+
+router.post('/show-posts', authMiddleware, upload.single('attachments'), postsController.createPost);
+router.get('/posts/:postId', authMiddleware, postsController.getPost);
+router.put('/posts/:postId', authMiddleware, postsController.updatePost);
+router.delete('/posts/:postId', authMiddleware, postsController.deletePost);
 
 module.exports = router;

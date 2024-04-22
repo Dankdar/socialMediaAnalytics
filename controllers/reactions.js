@@ -19,7 +19,8 @@ exports.addReaction = async (req, res, next) => {
         });
         await reaction.save();
         res.status(201).send(reaction);
-    } catch (error) {
+    }
+    catch (error) {
         res.status(400).send(error);
     }
 };

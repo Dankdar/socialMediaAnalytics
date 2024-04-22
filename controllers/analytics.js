@@ -29,7 +29,8 @@ exports.getPostAnalytics = async (req, res) => {
         };
 
         res.send({ analytics });
-    } catch (error) {
+    }
+    catch (error) {
         res.status(500).send(error);
     }
 };

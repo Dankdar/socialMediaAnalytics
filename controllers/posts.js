@@ -69,7 +69,8 @@ exports.getAllPosts = async (req, res) => {
         // Fetch posts created by the specific user
         const posts = await Post.find({ createdBy: userId })
             .populate('createdBy', 'username name')
-            .populate('comments.createdBy', 'username');
+            .populate('comments.createdBy', 'username')
+            .populate('likes', 'username name');
 
         // Check if the posts array is empty
         if (posts.length === 0) {

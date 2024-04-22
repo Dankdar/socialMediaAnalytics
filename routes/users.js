@@ -29,9 +29,7 @@ router.get('/', usersController.index );
 router.post('/register', upload.single('avatar'), usersMiddleware.validateUser, usersController.create );
 router.post('/login',  usersMiddleware.validateLogin , usersController.login );
 router.post('/:username',  checkAuth, usersController.user );
-
 router.put('/me', checkAuth, usersMiddleware.validateUser, rbacMiddleware.checkPermission('update_record') , usersController.update );
-
 router.delete('delete/:id', checkAuth, rbacMiddleware.checkPermission('remove_record'), usersController.delete );
 router.delete('/:id', checkAuth, rbacMiddleware.checkPermission('remove_record'), usersController.remove ); // soft Deletes
 

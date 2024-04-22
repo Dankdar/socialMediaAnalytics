@@ -1,0 +1,12 @@
+{
+  "roles": [
+    {
+      "name": "Admin",
+      "permissions": ["create_record", "read_record", "update_record", "delete_record", "remove_record"]
+    },
+    {
+      "name": "User",
+      "permissions": ["create_record", "read_record", "update_record", "remove_record"]
+    }
+  ]
+}

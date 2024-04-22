@@ -1,11 +1,10 @@
 const Reaction = require('../models/reactions');
 
-exports.addReaction = async (req, res) => {
+exports.addReaction = async (req, res, next) => {
     try {
-        const { postId, type } = req.body;
-        const createdBy = req.user._id; // assuming req.user is populated from the authentication middleware
+        const { postId, type, createdBy } = req.body;
+        console.log(req)
 
-        // Check if the reaction already exists and update it
         const existingReaction = await Reaction.findOne({ post: postId, createdBy });
         if (existingReaction) {
             existingReaction.type = type;
@@ -13,7 +12,6 @@ exports.addReaction = async (req, res) => {
             return res.status(200).send(existingReaction);
         }
 
-        // Create a new reaction
         const reaction = new Reaction({
             post: postId,
             type,
@@ -26,12 +24,12 @@ exports.addReaction = async (req, res) => {
     }
 };
 
-exports.removeReaction = async (req, res) => {
+exports.removeReaction = async (req, res, next) => {
     try {
         const { reactionId } = req.params;
         const reaction = await Reaction.findOneAndDelete({
             _id: reactionId,
-            createdBy: req.user._id // Ensure that users can only remove their own reactions
+            createdBy: req.user._id
         });
 
         if (!reaction) {
@@ -39,7 +37,8 @@ exports.removeReaction = async (req, res) => {
         }
 
         res.status(200).send({ message: 'Reaction removed' });
-    } catch (error) {
+    }
+    catch (error) {
         res.status(500).send(error);
     }
 };

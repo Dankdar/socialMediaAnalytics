@@ -13,7 +13,7 @@ const storage = multer.diskStorage({
         cb(null, file.fieldname + '-' + uniqueSuffix + file.originalname);
     },
     fileFilter: (req, file, cb) => {
-        if (file.fieldname === 'attachments' || file.fieldname === 'excelFile') {
+        if (file.fieldname === 'attachments' || file.fieldname === 'excelFile' || file.fieldname === '') {
             cb(null, true);
         } else {
             cb(new Error('Unexpected field'));
@@ -24,7 +24,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 router.post('/show-posts', authMiddleware, upload.single('attachments'), postsController.createPost);
-router.get('/posts/:postId', authMiddleware, postsController.getPost);
+router.get('/posts/:postId', authMiddleware,  postsController.getPost);
 router.put('/posts/:postId', authMiddleware, postsController.updatePost);
 router.delete('/posts/:postId', authMiddleware, postsController.deletePost);
 

@@ -4,7 +4,7 @@ const Post = require('../models/posts');
 exports.createPost = async (req, res) => {
     try {
         const post = new Post({
-            createdBy: req.user._id, // assuming req.user is populated from a middleware
+            createdBy: req.body.id,
             content: req.body.content,
             attachments: req.body.attachments
         });
@@ -27,6 +27,19 @@ exports.getPost = async (req, res) => {
         res.status(500).send(error);
     }
 };
+// exports.getAllPosts = async (req, res) => {
+//     try {
+//         const post = await Post.find({_id:req.params.postId})
+//             .populate('createdBy', 'username name')
+//             .populate('comments.createdBy', 'username');
+//         if (!post) {
+//             return res.status(404).send();
+//         }
+//         res.send(post);
+//     } catch (error) {
+//         res.status(500).send(error);
+//     }
+// };s
 exports.updatePost = async (req, res) => {
     const updates = Object.keys(req.body);
     const allowedUpdates = ['content', 'attachments'];

@@ -12,10 +12,10 @@ exports.addReaction = async (req, res, next) => {
         if (!post) {
             return res.status(404).send({ message: 'Post not found' });
         }
-        if (post.likes.includes(createdBy)) {
-            post.likes = post.likes.filter(id => !id.equals(createdBy));
-        }
-        else{
+        if (!post.likes.includes(createdBy)) {
+            // post.likes = post.likes.filter(id => !id.equals(createdBy));
+        // }
+        // else{
             post.likes.push(createdBy);
         }
 
@@ -27,7 +27,7 @@ exports.addReaction = async (req, res, next) => {
             existingReaction.type = type;
             await existingReaction.save();
 
-            res.status(200).json({
+            return res.status(200).json({
                 data: response.success('Post reacted to successfully', existingReaction, 200)
             });
         }

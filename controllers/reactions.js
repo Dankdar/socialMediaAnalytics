@@ -26,7 +26,7 @@ exports.addReaction = async (req, res, next) => {
         if (existingReaction) {
             existingReaction.type = type;
             await existingReaction.save();
-            return res.status(200).send(existingReaction);
+
             res.status(200).json({
                 data: response.success('Post reacted to successfully', existingReaction, 200)
             });

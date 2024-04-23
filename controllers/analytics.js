@@ -1,6 +1,6 @@
 const Post = require('../models/posts');
 const Reaction = require('../models/reactions');
-
+const response = require("../helpers/responseApi");
 
 exports.getPostAnalytics = async (req, res) => {
     try {
@@ -11,7 +11,6 @@ exports.getPostAnalytics = async (req, res) => {
             return res.status(404).send({ message: 'Post not found' });
         }
 
-        // Calculate analytics data
         const reactions = await Reaction.find({ post: postId });
         const reactionCounts = reactions.reduce((acc, reaction) => {
             acc[reaction.type] = (acc[reaction.type] || 0) + 1;
@@ -28,9 +27,13 @@ exports.getPostAnalytics = async (req, res) => {
             totalShares: post.sharedCount
         };
 
-        res.send({ analytics });
+        res.status(200).json({
+            data: response.success('Successfully fetched Analytics', analytics, 200)
+        });
     }
     catch (error) {
-        res.status(500).send(error);
+        return res.status(500).json({
+            data: response.error(error, 500)
+        });
     }
 };

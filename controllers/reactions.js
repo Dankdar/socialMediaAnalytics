@@ -81,6 +81,8 @@ exports.removeReaction = async (req, res, next) => {
         });
     }
     catch (error) {
-        res.status(500).send(error);
+        return res.status(500).json({
+            data: response.error(error, 500)
+        });
     }
 };

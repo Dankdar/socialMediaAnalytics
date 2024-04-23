@@ -25,64 +25,53 @@ exports.getPost = async (req, res, next) => {
         if (!post) {
             return res.status(404).send();
         }
-        res.send(post);
+        res.status(200).json({
+            data: response.success('Post fetched successfully!',post,200)
+        })
     }
     catch (error) {
-        res.status(500).send(error);
+        res.status(500).json({
+            error: response.error(error,500)
+        })
     }
 };
 
-
-// exports.getAllPosts = async (req, res, next) => {
-//     try {
-//         const posts = await Post.find({_id: mongoose.Types.ObjectId(req.body.id)})
-//             .populate('createdBy', 'username name')
-//             .populate('comments.createdBy', 'username');
-//
-//         if (!posts) {
-//             res.status(200).json({
-//                 data: response.error("no Posts found", 200)
-//             })
-//         }
-//         res.status(200).json({
-//             data: { posts: response.success('Posts Fetched', posts, 200),
-//                 total: posts.length
-//             }
-//         })
-//     } catch (error) {
-//         res.status(500).json({
-//             data: response.error(error, 500)
-//         })
-//     }
-// };
-
 exports.getAllPosts = async (req, res) => {
     try {
-        console.log(req.params)
-        const userId = req.params.postId
+        console.log(req.params);
+        const userId = req.params.userId;
         if (!userId) {
             return res.status(400).json({
                 data: response.error("User ID is required", 400)
             });
         }
 
-        // Fetch posts created by the specific user
+        // Pagination setup
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10; // default 10 items per page
+        const skip = (page - 1) * limit;
+
+        // Fetching data with pagination
         const posts = await Post.find({ createdBy: userId })
             .populate('createdBy', 'username name')
             .populate('comments.createdBy', 'username')
-            .populate('likes', 'username name');
+            .populate('likes', 'username name')
+            .skip(skip)
+            .limit(limit);
 
-        // Check if the posts array is empty
-        if (posts.length === 0) {
+        const total = await Post.countDocuments({ createdBy: userId });
+
+        if (!posts.length) {
             return res.status(200).json({
                 data: response.error("No posts found for this user", 200)
             });
         }
 
-        // Respond with all posts and their total count
         res.status(200).json({
             data: response.success('Posts fetched successfully', posts, 200),
-            total: posts.length
+            total: total,
+            page: page,
+            pages: Math.ceil(total / limit) // total number of pages
         });
     } catch (error) {
         res.status(500).json({
@@ -90,7 +79,6 @@ exports.getAllPosts = async (req, res) => {
         });
     }
 };
-
 
 exports.updatePost = async (req, res, next) => {
     const updates = Object.keys(req.body);
@@ -110,7 +98,10 @@ exports.updatePost = async (req, res, next) => {
 
         updates.forEach(update => post[update] = req.body[update]);
         await post.save();
-        res.send(post);
+
+        res.status(200).json({
+            data: response.success('Post updated Successfully!', post, 200)
+        });
     } catch (error) {
         res.status(400).send(error);
     }
@@ -124,8 +115,12 @@ exports.deletePost = async (req, res, next) => {
             return res.status(404).send();
         }
 
-        res.send(post);
+        res.status(200).json({
+            data: response.success("Successfully Deleted Post.",post,200)
+        })
     } catch (error) {
-        res.status(500).send(error);
+        res.status(500).json({
+            error: response.error(error,500)
+        })
     }
 };

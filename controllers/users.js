@@ -9,234 +9,153 @@ const {validate_user} = require("../middleware/users");
 const xlsx = require('xlsx');
 
 
-exports.index = async (req, res, next) => {
+exports.index = async (req, res) => {
     try {
-        const users = await User.find().select("name email role phoneNumber address avatar isActive _id createdAt deletedAt");
-        const data = {
-            'total users' : users.length,
-            'data' : users
-        }
-        if(users.length){
-            res.status(200).json({
-                data: response.success('Success',data,200)
+        const users = await User.find().select("name email role phoneNumber address avatar isActive _id createdAt");
+        res.status(200).json({
+            data: response.success('Success', {
+                totalUsers: users.length,
+                users
+            }, 200)
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: response.error('Server error', 500)
+        });
+    }
+};
+
+exports.user = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId).select("name username email role avatar isActive _id createdAt");
+        if (!user) {
+            return res.status(404).json({
+                error: response.error('No user exists with the given ID', 404)
             });
         }
-        else{
-            res.status(200).json({
-                data: response.error('No Users Exists!',200)
-            })
-        }
-
+        res.status(200).json({
+            data: response.success('Success', user, 200)
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: response.error('Server error', 500)
+        });
     }
-    catch (error) {
-            res.status(500).json({
-                error: response.error(error,500)
-            })
-        }
-}
+};
 
-exports.user = async (req, res, next) => {
+exports.create = async (req, res) => {
     try {
-        const user = await User.findOne({_id:  req.user.userId}).select("name username email role avatar isActive _id createdAt deletedAt");
-        const data = {
-            'data' : user
-        }
-        if(user){
-            res.status(200).json({
-                data: response.success('Success',data,200)
+        const { email, username, password } = req.body;
+        if (!email || !username || !password) {
+            return res.status(400).json({
+                error: response.error('All fields must be filled', 400)
             });
         }
-        else{
-            res.status(200).json({
-                data: response.error('No User Exists!',200)
-            })
+        const userExists = await User.findOne({$or: [{email}, {username}]});
+        if (userExists) {
+            return res.status(409).json({
+                error: response.error('Email or Username already taken', 409)
+            });
         }
-    }
-    catch (error) {
-            res.status(500).json({
-                error: response.error(error,500)
-            })
-        }
-}
-
-exports.create = async (req,res,next) => {
-    try{
-        const user = await User.findOne({$or: [{email: req.body.email},{username: req.body.username}]});
-        if(user){
-            res.status(409).json({
-                data: response.error('E-Mail 0r Username Already Taken!',409)
-            })
-        }
-        else{
-            bcrypt.hash(req.body.password,10,async (err, hash) => {
-                if (err) {
-                    res.status(400).json({
-                        data: response.error(err, 400)
-                    })
-                } else {
-                    const usersObject = {
-                        name: req.body.name,
-                        username: req.body.username,
-                        email: req.body.email,
-                        phoneNumber: req.body.phoneNumber,
-                        password: hash,
-                        role: req.body.role,
-                        avatar: req.file.path,
-                        address: req.body.address,
-                        dateOfBirth: req.body.dateOfBirth
-                    }
-                    const user = new User(usersObject)
-                    const result = await user.save()
-                    if (result._id) {
-                        res.status(201).json({
-                            data: response.success('User Created Successfully!', user, 201)
-                        })
-                    } else {
-                        res.status(409).json({
-                            data: response.error(err, 409)
-                        })
-                    }
-                }
-            })
-        }
-    }
-    catch(error){
-        res.status(400).json({
-            data: response.error(error,400)
-        })
-    }
-}
-
-exports.login = async (req, res, next) => {
-    try{
-        const user = await User.findOne({ role: req.body.role , email: req.body.email });
-        if(!user) {
-            res.status(404).json({
-                data: response.error("Email or Password is Incorrect and or Does Not Exist",404)
-            })
-        }
-        else{
-            bcrypt.compare(req.body.password,user.password,(err,resp)=>{
-                if(err){
-                    res.status(401).json({
-                        data: response.error("Incorrect Password or E-Mail.",401)
-                    })
-                }
-                if(resp){
-                    const token = jwt.sign({
-                            email: user.email,
-                            userId: user._id
-                        },
-                        process.env.JWT_KEY,
-                        {expiresIn: "12h"})
-
-                    const data =  {
-                        "user": user,
-                        "token": token,
-                        "expiresIn": "12hrs"
-                    }
-
-
-                    res.status(200).json({
-                        data: response.success("Logged in Successfully!",data,200)
-                    })
-                    return
-                }
-                res.status(401).json({
-                    data: response.error("Incorrect Password or E-Mail.",401)
-                })
-            })
-        }
-    }
-    catch(error){
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const user = new User({ ...req.body, password: hashedPassword });
+        await user.save();
+        res.status(201).json({
+            data: response.success('User created successfully', user, 201)
+        });
+    } catch (error) {
         res.status(500).json({
-            data: response.error(error,500)
-        })
+            error: response.error('Server error', 500)
+        });
     }
-}
+};
 
-exports.update = async (req, res, next) => {
-    try{
-        bcrypt.hash(req.body.password,10,async (err, hash) => {
-            if (err) {
-                res.status(400).json(response.error(err, 400));
-            } else {
-                const user = await User.updateOne({_id: req.body.userId}, {
-                    $set: {
-                        name: req.body.name,
-                        email: req.body.email,
-                        phoneNumber: req.body.phoneNumber,
-                        password: hash,
-                        role: req.body.role,
-                        avatar: req.file.path,
-                        address: req.body.address,
-                    }
-                })
-                if (user.matchedCount > 0 && user.modifiedCount > 0) {
-                    res.status(200).json(
-                        response.success("successfully updated! ", user, 200)
-                    );
-                } else if (user.matchedCount > 0) {
-                    res.status(404).json(
-                        response.error(`No entry Exists with ID: ${req.params.id}`, 404)
-                    );
-                } else {
-                    res.status(404).json(
-                        response.error(`Invalid Request on ID: ${req.params.id}`, 404)
-                    );
-                }
-            }
-        })
-    }
-    catch(error){
-        res.json(response.error(error,400))
-    }
-
-}
-
-exports.remove = async (req,res) => {
-    try{
-        const result = await User.updateOne({_id: req.body.userId},{ $set: {
-                deletedAt: Date.now(),
-            }})
-        if (result.matchedCount > 0 && result.modifiedCount > 0) {
-            res.status(200).json(
-                response.success("successfully soft deleted! ", result, 200)
-            );
-        } else if (result.matchedCount > 0) {
-            res.status(404).json(
-                response.error(`No entry Exists with ID: ${req.params.id}`, 404)
-            );
-        } else {
-            res.status(404).json(
-                response.error(`Invalid Request on ID: ${req.params.id}`, 404)
-            );
+exports.login = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                error: response.error("Email does not exist", 404)
+            });
         }
-    }
-    catch(error){
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({
+                error: response.error("Incorrect password", 401)
+            });
+        }
+        const token = jwt.sign({
+            email: user.email,
+            userId: user._id
+        }, process.env.JWT_KEY, { expiresIn: "12h" });
+
+        res.status(200).json({
+            data: response.success("Logged in successfully", {
+                user,
+                token,
+                expiresIn: "12hrs"
+            }, 200)
+        });
+    } catch (error) {
         res.status(500).json({
-            error: response.error(error,500)
-        })
+            error: response.error('Server error', 500)
+        });
     }
-}
+};
 
-exports.delete = async (req,res) => {
-    try{
-        const user = await User.deleteOne({_id:req.body.userId})
-        if(user.deletedCount>0){
-            res.status(200).json(
-                response.success("User Deleted Successfully!",user,200));
-        }
-        else{
-            res.status(404).json(response.error(`No entry Exists with ID: ${req.params.id}`,404))
-        }
-    }
-    catch(error){
-        res.status(500).json(
-            response.error(error,500)
+exports.update = async (req, res) => {
+    try {
+        const { userId, name, email, phoneNumber, password, role, address } = req.body;
+        const avatar = req.file?.path;
+
+        const hash = await bcrypt.hash(password, 10);
+
+        const user = await User.findOneAndUpdate(
+            { _id: userId },
+            { $set: { name, email, phoneNumber, password: hash, role, avatar, address } },
+            { new: true, runValidators: true }
         );
+
+        if (!user) {
+            return res.status(404).json(response.error(`No user exists with ID: ${userId}`, 404));
+        }
+
+        res.status(200).json(response.success("Successfully updated!", user, 200));
+    } catch (error) {
+        res.status(500).json(response.error(error.message, 500));
     }
-}
+};
+
+exports.remove = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const result = await User.updateOne({_id: userId}, { $set: { deletedAt: new Date() }});
+
+        if (result.modifiedCount === 0) {
+            return res.status(404).json(response.error(`No entry exists with ID: ${userId}`, 404));
+        }
+
+        res.status(200).json(response.success("Successfully soft deleted!", { userId }, 200));
+    } catch (error) {
+        res.status(500).json(response.error(error.message, 500));
+    }
+};
+
+exports.delete = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const result = await User.deleteOne({_id: userId});
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json(response.error(`No entry exists with ID: ${userId}`, 404));
+        }
+
+        res.status(200).json(response.success("User deleted successfully!", { userId }, 200));
+    } catch (error) {
+        res.status(500).json(response.error(error.message, 500));
+    }
+};
 
 exports.addBulkUser = async (req, res, next) => {
     const workbook = xlsx.readFile(req.file.path);

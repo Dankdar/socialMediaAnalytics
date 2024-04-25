@@ -18,7 +18,6 @@ exports.validateUser = (req,res,next) => {
         avatar: Joi.string(),
         role: Joi.string().required()
     })
-    console.log('req.body=> ',req.body);
     const result = schema.validate(req.body);
 
     const errors = [];

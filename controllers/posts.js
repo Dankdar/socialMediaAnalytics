@@ -38,7 +38,6 @@ exports.getPost = async (req, res, next) => {
 
 exports.getAllPosts = async (req, res) => {
     try {
-        console.log(req.params);
         const userId = req.params.userId;
         if (!userId) {
             return res.status(400).json({

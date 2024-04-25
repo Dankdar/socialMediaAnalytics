@@ -5,7 +5,6 @@ const response = require("../helpers/responseApi");
 exports.addReaction = async (req, res, next) => {
     try {
         const { postId, type, createdBy } = req.body;
-        console.log(req)
 
         //
         const post = await Post.findById(postId);

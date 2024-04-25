@@ -12,7 +12,6 @@ exports.logger =  async (req, res, next) => {
 
     const oldSend = res.send; // Capture response data
     res.send = async function (data) {
-        console.log('Response:', data);
 
         const logData = {
             method: req.method,

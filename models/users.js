@@ -39,7 +39,6 @@ const userSchema = mongoose.Schema({
         type: Date,
         validate: {
             validator: function(date) {
-                console.log(date)
                 const age = Math.floor((Date.now() - date) / (1000 * 60 * 60 * 24 * 365));
                 return age >= 18;
             },

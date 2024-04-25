@@ -37,7 +37,7 @@ exports.index = async (req, res, next) => {
 
 exports.user = async (req, res, next) => {
     try {
-        const user = await User.findOne({username: req.params.username}).select("name username email role avatar isActive _id createdAt deletedAt");
+        const user = await User.findOne({_id:  req.user.userId}).select("name username email role avatar isActive _id createdAt deletedAt");
         const data = {
             'data' : user
         }

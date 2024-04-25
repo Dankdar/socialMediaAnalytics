@@ -6,32 +6,43 @@ exports.addReaction = async (req, res, next) => {
     try {
         const { postId, type, createdBy } = req.body;
 
+        //
         const post = await Post.findById(postId);
         if (!post) {
             return res.status(404).json({
                 data: response.error('Post not found', 404)
             });
         }
-
-        const reaction = await Reaction.findOneAndUpdate(
-            { post: postId, createdBy },
-            { type },
-            { new: true, upsert: true, setDefaultsOnInsert: true }
-        );
-
-
-        if (reaction.isNew && !post.likes.includes(createdBy)) {
+        if (!post.likes.includes(createdBy)) {
             post.likes.push(createdBy);
-            await post.save();
         }
 
-        return res.status(reaction.isNew ? 201 : 200).json({
-            data: response.success(reaction.isNew ? 'Reacted successfully' : 'Post reacted to successfully', reaction, reaction.isNew ? 201 : 200)
+        await post.save();
+        ///
+
+        const existingReaction = await Reaction.findOne({ post: postId, createdBy });
+        if (existingReaction) {
+            existingReaction.type = type;
+            await existingReaction.save();
+
+            return res.status(200).json({
+                data: response.success('Post reacted to successfully', existingReaction, 200)
+            });
+        }
+
+        const reaction = new Reaction({
+            post: postId,
+            type,
+            createdBy
+        });
+        await reaction.save();
+        res.status(201).json({
+            data: response.success('Reacted successfully', reaction, 201)
         });
     }
     catch (error) {
-        return res.status(500).json({
-            data: response.error(error, 500)
+        return res.status(400).json({
+            data: response.error(error, 400)
         });
     }
 };

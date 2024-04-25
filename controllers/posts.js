@@ -1,38 +1,34 @@
 const Post = require('../models/posts');
 const response = require("../helpers/responseApi");
-
+const { ObjectId } = require('mongoose').Types;
 
 exports.createPost = async (req, res, next) => {
     try {
         const post = new Post({
             createdBy: req.body.createdBy,
             content: req.body.content,
-            attachments: req.file.path
+            attachments: req.file ? req.file.path : null
         });
         await post.save();
-        res.status(201).send(post);
+        res.status(201).json({ data: response.success('Post created successfully!', post, 201) });
+    } catch (error) {
+        res.status(400).json({ error: response.error('Failed to create post. ' + error.message, 400) });
     }
-    catch (error) {
-        res.status(400).send(error);
-    }
-}
+};
 
 exports.getPost = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.postId)
             .populate('createdBy', 'username name')
             .populate('comments.createdBy', 'username');
+
         if (!post) {
-            return res.status(404).send();
+            return res.status(404).json({ error: response.error('Post not found', 404) });
         }
-        res.status(200).json({
-            data: response.success('Post fetched successfully!',post,200)
-        })
-    }
-    catch (error) {
-        res.status(500).json({
-            error: response.error(error,500)
-        })
+
+        res.status(200).json({ data: response.success('Post fetched successfully!', post, 200) });
+    } catch (error) {
+        res.status(500).json({ error: response.error(`Failed to fetch post: ${error.message}`, 500) });
     }
 };
 
@@ -40,42 +36,33 @@ exports.getAllPosts = async (req, res) => {
     try {
         const userId = req.params.userId;
         if (!userId) {
-            return res.status(400).json({
-                data: response.error("User ID is required", 400)
-            });
+            return res.status(400).json({ data: response.error("User ID is required", 400) });
         }
 
-        // Pagination setup
         const page = parseInt(req.query.page, 10) || 1;
-        const limit = parseInt(req.query.limit, 10) || 10; // default 10 items per page
+        const limit = parseInt(req.query.limit, 10) || 10;
         const skip = (page - 1) * limit;
 
-        // Fetching data with pagination
-        const posts = await Post.find({ createdBy: userId })
-            .populate('createdBy', 'username name')
-            .populate('comments.createdBy', 'username')
-            .populate('likes', 'username name')
-            .skip(skip)
-            .limit(limit);
-
-        const total = await Post.countDocuments({ createdBy: userId });
-
-        if (!posts.length) {
-            return res.status(200).json({
-                data: response.error("No posts found for this user", 200)
-            });
-        }
+        const [posts, total] = await Promise.all([
+            Post.find({ createdBy: new ObjectId(userId) })
+                .populate('createdBy', 'username name')
+                .populate('comments.createdBy', 'username')
+                .populate('likes', 'username name')
+                .skip(skip)
+                .limit(limit),
+            Post.countDocuments({ createdBy: userId })
+        ]);
 
         res.status(200).json({
             data: response.success('Posts fetched successfully', posts, 200),
-            total: total,
-            page: page,
-            pages: Math.ceil(total / limit) // total number of pages
+            meta: {
+                total: total,
+                page: page,
+                pages: Math.ceil(total / limit)
+            }
         });
     } catch (error) {
-        res.status(500).json({
-            data: response.error(`An error occurred: ${error.message}`, 500)
-        });
+        res.status(500).json({ data: response.error(`An error occurred: ${error.message}`, 500) });
     }
 };
 
@@ -85,24 +72,34 @@ exports.updatePost = async (req, res, next) => {
     const isValidOperation = updates.every(update => allowedUpdates.includes(update));
 
     if (!isValidOperation) {
-        return res.status(400).send({ error: 'Invalid updates!' });
+        return res.status(400).json({
+            error: response.error('Invalid updates!', 400)
+        });
     }
 
     try {
-        const post = await Post.findOne({ _id: req.params.postId, createdBy: req.user._id });
+        const { postId } = req.params;
+        const { _id: userId } = req.user;
+
+        const post = await Post.findOneAndUpdate(
+            { _id: postId, createdBy: userId },
+            { $set: req.body },
+            { new: true, runValidators: true }
+        );
 
         if (!post) {
-            return res.status(404).send();
+            return res.status(404).json({
+                error: response.error('Post not found or not authorized to update.', 404)
+            });
         }
 
-        updates.forEach(update => post[update] = req.body[update]);
-        await post.save();
-
         res.status(200).json({
-            data: response.success('Post updated Successfully!', post, 200)
+            data: response.success('Post updated successfully!', post, 200)
         });
     } catch (error) {
-        res.status(400).send(error);
+        res.status(500).json({
+            error: response.error('Failed to update post.', 500)
+        });
     }
 };
 
